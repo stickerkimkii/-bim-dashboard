@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BIM Dashboard – Architecture Drawing</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --terracotta: #974315;
+    --terracotta-light: #c4622d;
+    --azul: #788990;
+    --azul-dark: #4e6168;
+    --bege: #E3D6C5;
+    --perola: #F0EDE4;
+    --verde: #8D957E;
+    --white: #ffffff;
+    --text-dark: #2b2b2b;
+    --text-mid: #555;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--perola); color: var(--text-dark); min-height: 100vh; }
+
+  header {
+    background: var(--azul-dark); color: var(--white);
+    padding: 0 2rem; height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .header-left { display: flex; align-items: center; gap: 1rem; }
+  .bim-badge {
+    background: var(--terracotta); color: var(--white);
+    font-family: 'Playfair Display', serif; font-size: 1rem;
+    padding: 4px 12px; border-radius: 3px; letter-spacing: 1px;
+  }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--bege); }
+  .header-right { font-size: 0.8rem; color: var(--bege); opacity: 0.85; display:flex; align-items:center; gap:6px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #7ecb85; display: inline-block; }
+
+  main { max-width: 1350px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem; gap: 1rem; color: var(--azul); }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--bege); border-top-color: var(--terracotta); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .summary-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .card { background: var(--white); border-radius: 8px; padding: 1rem 1.3rem; box-shadow: var(--shadow); border-left: 4px solid var(--bege); transition: transform 0.15s; }
+  .card:hover { transform: translateY(-2px); }
+  .card.c-terracotta { border-color: var(--terracotta); }
+  .card.c-azul       { border-color: var(--azul); }
+  .card.c-verde      { border-color: var(--verde); }
+  .card.c-bege       { border-color: #c4a97d; }
+  .card-value { font-size: 1.9rem; font-weight: 600; color: var(--text-dark); line-height: 1; }
+  .card-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-mid); margin-top: 6px; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; margin-bottom: 1rem; }
+  .controls label { font-size: 0.75rem; font-weight: 500; color: var(--text-mid); margin-right: 3px; }
+  .controls select, .controls input[type="text"] {
+    font-family: 'Inter', sans-serif; font-size: 0.8rem;
+    padding: 6px 10px; border: 1.5px solid var(--bege);
+    border-radius: 5px; background: var(--white); color: var(--text-dark); outline: none; transition: border-color 0.2s;
+  }
+  .controls select:focus, .controls input[type="text"]:focus { border-color: var(--azul); }
+  .btn { font-family: 'Inter', sans-serif; font-size: 0.78rem; padding: 6px 14px; border: none; border-radius: 5px; cursor: pointer; transition: background 0.2s; }
+  .btn-reset   { background: var(--terracotta); color: var(--white); }
+  .btn-reset:hover { background: var(--terracotta-light); }
+  .btn-refresh { background: var(--azul-dark); color: var(--white); }
+  .btn-refresh:hover { background: var(--azul); }
+
+  .meta-bar { font-size: 0.72rem; color: var(--text-mid); margin-bottom: 0.75rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem; }
+
+  .table-wrap { background: var(--white); border-radius: 10px; box-shadow: var(--shadow); overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; min-width: 700px; }
+  thead tr { background: var(--azul-dark); color: var(--white); text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.7rem; }
+  thead th { padding: 12px 14px; text-align: left; font-weight: 500; white-space: nowrap; cursor: pointer; user-select: none; }
+  thead th:hover { background: var(--azul); }
+  tbody tr { border-bottom: 1px solid #ede8e0; transition: background 0.12s; }
+  tbody tr:hover { background: #f5f0e8; }
+
+  .building-row td { background: var(--azul-dark); font-weight: 600; font-size: 0.85rem; color: var(--white); padding: 10px 14px; letter-spacing: 1px; text-transform: uppercase; }
+  .level-row td { background: var(--bege); font-weight: 600; font-size: 0.78rem; color: var(--terracotta); padding: 7px 14px; border-left: 4px solid var(--terracotta); text-transform: uppercase; }
+
+  tbody td { padding: 9px 14px; color: var(--text-dark); vertical-align: middle; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap; }
+  .badge-floor { background: #fde8e0; color: #974315; }
+  .badge-ceil  { background: #e6ecf0; color: #4e6168; }
+  .badge-dwg   { background: #dce8e4; color: #3d5c51; }
+  .badge-pdf   { background: #fdf0d5; color: #8a5e10; }
+
+  .drawing-label { font-size: 0.72rem; color: var(--azul); font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; }
+  .link-cell a { color: var(--azul); text-decoration: none; font-size: 0.76rem; border-bottom: 1px dashed var(--azul); transition: color 0.15s; }
+  .link-cell a:hover { color: var(--terracotta); border-color: var(--terracotta); }
+  .notes-cell { font-size: 0.74rem; color: #aaa; font-style: italic; }
+  .empty-row td { text-align: center; padding: 2.5rem; color: #bbb; font-size: 0.85rem; }
+
+  .error-box { background: #fff3f0; border: 1.5px solid #f4a08a; border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 1.5rem; color: var(--terracotta); font-size: 0.83rem; }
+  .error-box strong { display: block; margin-bottom: 0.3rem; }
+
+  footer { text-align: center; font-size: 0.7rem; color: #bbb; padding: 1.5rem 0; letter-spacing: 0.5px; }
+
+  @media (max-width: 768px) {
+    .summary-bar { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <span class="bim-badge">BIM</span>
+    <h1>Architecture Drawing Dashboard</h1>
+  </div>
+  <div class="header-right">
+    <span class="status-dot"></span>
+    <span>Live · Google Sheets</span>
+  </div>
+</header>
+
+<main>
+
+  <div class="summary-bar">
+    <div class="card c-terracotta"><div class="card-value" id="totalCount">—</div><div class="card-label">Total Drawings</div></div>
+    <div class="card c-azul"><div class="card-value" id="buildingCount">—</div><div class="card-label">Buildings</div></div>
+    <div class="card c-verde"><div class="card-value" id="floorCount">—</div><div class="card-label">Floor Plans</div></div>
+    <div class="card"><div class="card-value" id="ceilCount">—</div><div class="card-label">Ceiling Plans</div></div>
+    <div class="card c-bege"><div class="card-value" id="dwgCount">—</div><div class="card-label">DWG Files</div></div>
+    <div class="card" style="border-color:#c4a97d"><div class="card-value" id="pdfCount">—</div><div class="card-label">PDF Files</div></div>
+  </div>
+
+  <div id="errorBox" class="error-box" style="display:none">
+    <strong>⚠️ ไม่สามารถโหลดข้อมูลได้</strong>
+    <span id="errorMsg"></span>
+  </div>
+
+  <div class="controls">
+    <div><label>Building</label>
+      <select id="filterBuilding"><option value="">All Buildings</option></select></div>
+    <div><label>Level</label>
+      <select id="filterLevel"><option value="">All Levels</option></select></div>
+    <div><label>Plan</label>
+      <select id="filterPlan">
+        <option value="">All Plans</option>
+        <option>FLOOR PLAN</option>
+        <option>CEILING PLAN</option>
+      </select></div>
+    <div><label>Type</label>
+      <select id="filterType">
+        <option value="">All Types</option>
+        <option>DWG</option>
+        <option>PDF</option>
+      </select></div>
+    <div><label>Notes</label>
+      <input type="text" id="searchNotes" placeholder="ค้นหา…"/></div>
+    <button class="btn btn-reset" onclick="resetFilters()">Reset</button>
+    <button class="btn btn-refresh" onclick="loadData()">🔄 Refresh</button>
+  </div>
+
+  <div class="meta-bar">
+    <span id="lastUpdated"></span>
+    <span id="rowCount"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortTable(0)">Drawing Type ↕</th>
+          <th onclick="sortTable(1)">Level ↕</th>
+          <th onclick="sortTable(2)">Plan ↕</th>
+          <th onclick="sortTable(3)">Type ↕</th>
+          <th>Link Files</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="6"><div class="loading-wrap"><div class="spinner"></div><span>กำลังโหลดข้อมูลจาก Google Sheets…</span></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<footer>BIM Dashboard · Architecture Drawing Register · Powered by Google Sheets</footer>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbwNW4DvqCL8MQFawf7TGmO9npMDdK4klyemohHURQe512bMDU_kiTi30hmmZdn5dQi3/exec';
+
+let allData = [];
+let sortCol = -1, sortAsc = true;
+
+// Map คอลัมน์จาก Sheets → ชื่อ key ที่ใช้ใน Dashboard
+// Sheets columns: ARCHITECTURE DRAWING | LEVEL | PLAN | TYPE | LINK FILES | Notes
+function mapRow(raw, buildingName) {
+  // raw คือ object ที่ key = header จาก Sheets
+  // รองรับทั้งชื่อคอลัมน์แบบต่างๆ
+  const get = (...keys) => {
+    for (const k of keys) {
+      const found = Object.keys(raw).find(rk => rk.toUpperCase().replace(/\s+/g,'') === k.toUpperCase().replace(/\s+/g,''));
+      if (found && raw[found] !== '' && raw[found] !== undefined) return String(raw[found]);
+    }
+    return '';
+  };
+  return {
+    BUILDING: buildingName,
+    DRAWING:  get('ARCHITECTURE DRAWING', 'DRAWING', 'ARCHITECTUREDRAWING') || 'ARCHITECTURE DRAWING',
+    LEVEL:    get('LEVEL'),
+    PLAN:     get('PLAN'),
+    TYPE:     get('TYPE'),
+    LINK:     get('LINK FILES', 'LINK', 'LINKFILES'),
+    NOTES:    get('NOTES', 'NOTE'),
+  };
+}
+
+async function loadData() {
+  document.getElementById('tableBody').innerHTML =
+    `<tr><td colspan="6"><div class="loading-wrap"><div class="spinner"></div><span>กำลังโหลดข้อมูล…</span></div></td></tr>`;
+  document.getElementById('errorBox').style.display = 'none';
+
+  try {
+    const res = await fetch(API_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const raw = await res.json();
+
+    if (!Array.isArray(raw) || raw.length === 0) {
+      allData = [];
+      document.getElementById('tableBody').innerHTML =
+        `<tr class="empty-row"><td colspan="6">ยังไม่มีข้อมูลใน Google Sheets</td></tr>`;
+      updateSummary([]);
+      return;
+    }
+
+    // แต่ละ row มี key BUILDING ที่ Apps Script ใส่ให้แล้ว (= ชื่อ tab)
+    allData = raw.map(r => mapRow(r, r.BUILDING || ''));
+    populateFilters(allData);
+    renderTable();
+
+    const now = new Date();
+    document.getElementById('lastUpdated').textContent =
+      'อัปเดตล่าสุด: ' + now.toLocaleString('th-TH');
+
+  } catch (err) {
+    document.getElementById('errorBox').style.display = 'block';
+    document.getElementById('errorMsg').textContent = ' ' + err.message;
+    document.getElementById('tableBody').innerHTML =
+      `<tr class="empty-row"><td colspan="6">โหลดข้อมูลไม่สำเร็จ</td></tr>`;
+  }
+}
+
+function populateFilters(data) {
+  const buildings = [...new Set(data.map(r => r.BUILDING).filter(Boolean))].sort();
+  const levels    = [...new Set(data.map(r => r.LEVEL).filter(Boolean))].sort();
+
+  const bSel = document.getElementById('filterBuilding');
+  bSel.innerHTML = '<option value="">All Buildings</option>';
+  buildings.forEach(b => { const o = document.createElement('option'); o.value = b; o.textContent = b; bSel.appendChild(o); });
+
+  const lSel = document.getElementById('filterLevel');
+  lSel.innerHTML = '<option value="">All Levels</option>';
+  levels.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; lSel.appendChild(o); });
+}
+
+function renderTable() {
+  const building = document.getElementById('filterBuilding').value.toUpperCase();
+  const level    = document.getElementById('filterLevel').value.toUpperCase();
+  const plan     = document.getElementById('filterPlan').value.toUpperCase();
+  const type     = document.getElementById('filterType').value.toUpperCase();
+  const note     = document.getElementById('searchNotes').value.toLowerCase();
+
+  let filtered = allData.filter(r =>
+    (!building || r.BUILDING.toUpperCase() === building) &&
+    (!level    || r.LEVEL.toUpperCase()    === level) &&
+    (!plan     || r.PLAN.toUpperCase()     === plan) &&
+    (!type     || r.TYPE.toUpperCase()     === type) &&
+    (!note     || r.NOTES.toLowerCase().includes(note))
+  );
+
+  if (sortCol >= 0) {
+    const keys = ['DRAWING','LEVEL','PLAN','TYPE'];
+    filtered.sort((a,b) => {
+      const va = a[keys[sortCol]] || '';
+      const vb = b[keys[sortCol]] || '';
+      return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+  }
+
+  // Group: BUILDING → LEVEL
+  const grouped = {};
+  filtered.forEach(r => {
+    const b = r.BUILDING || '(ไม่ระบุอาคาร)';
+    const l = r.LEVEL    || '(ไม่ระบุชั้น)';
+    if (!grouped[b]) grouped[b] = {};
+    if (!grouped[b][l]) grouped[b][l] = [];
+    grouped[b][l].push(r);
+  });
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">ไม่พบข้อมูลที่ตรงกับตัวกรอง</td></tr>';
+    updateSummary([]);
+    document.getElementById('rowCount').textContent = '';
+    return;
+  }
+
+  Object.entries(grouped).forEach(([bName, levels]) => {
+    const btr = document.createElement('tr');
+    btr.className = 'building-row';
+    btr.innerHTML = `<td colspan="6">🏢 ${bName}</td>`;
+    tbody.appendChild(btr);
+
+    Object.entries(levels).forEach(([lName, items]) => {
+      const ltr = document.createElement('tr');
+      ltr.className = 'level-row';
+      ltr.innerHTML = `<td colspan="6">📐 ${lName}</td>`;
+      tbody.appendChild(ltr);
+
+      items.forEach(r => {
+        const plan = r.PLAN.toUpperCase();
+        const type = r.TYPE.toUpperCase();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="drawing-label">${r.DRAWING}</span></td>
+          <td>${r.LEVEL || '—'}</td>
+          <td><span class="badge ${plan.includes('FLOOR') ? 'badge-floor' : 'badge-ceil'}">${r.PLAN || '—'}</span></td>
+          <td><span class="badge ${type === 'DWG' ? 'badge-dwg' : 'badge-pdf'}">${r.TYPE || '—'}</span></td>
+          <td class="link-cell">${r.LINK ? `<a href="${r.LINK}" target="_blank" rel="noopener">เปิดไฟล์ ↗</a>` : '—'}</td>
+          <td class="notes-cell">${r.NOTES || '—'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    });
+  });
+
+  updateSummary(filtered);
+  document.getElementById('rowCount').textContent = `แสดง ${filtered.length} รายการ`;
+}
+
+function updateSummary(data) {
+  const buildings = new Set(data.map(r => r.BUILDING).filter(Boolean));
+  document.getElementById('totalCount').textContent    = data.length;
+  document.getElementById('buildingCount').textContent = buildings.size;
+  document.getElementById('floorCount').textContent    = data.filter(r => r.PLAN.toUpperCase().includes('FLOOR')).length;
+  document.getElementById('ceilCount').textContent     = data.filter(r => r.PLAN.toUpperCase().includes('CEILING')).length;
+  document.getElementById('dwgCount').textContent      = data.filter(r => r.TYPE.toUpperCase() === 'DWG').length;
+  document.getElementById('pdfCount').textContent      = data.filter(r => r.TYPE.toUpperCase() === 'PDF').length;
+}
+
+function sortTable(col) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = true; }
+  renderTable();
+}
+
+function resetFilters() {
+  ['filterBuilding','filterLevel','filterPlan','filterType'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('searchNotes').value = '';
+  sortCol = -1;
+  renderTable();
+}
+
+['filterBuilding','filterLevel','filterPlan','filterType','searchNotes'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderTable);
+});
+
+loadData();
+</script>
+</body>
+</html>
